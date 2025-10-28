@@ -22,7 +22,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='Evaluation on ImageNet.')
     parser.add_argument('--backbone', default='bagnet33', type=str, help='backbone model', choices=['resnet18', 'resnet50', 'bagnet33', 'bagnet17', 'bagnet9'])
     parser.add_argument('--dataset', default='imagenet', type=str, help='dataset to train on', choices=['imagenet', 'imagenette'])
-    parser.add_argument('--checkpoint', default='checkpoints/bagnet33_imagenette_pretrained.pt', type=str, help='filename of the checkpoint to evaluate')
+    parser.add_argument('--checkpoint', default='checkpoints/bagnet33_imagenet_pretrained.pt', type=str, help='filename of the checkpoint to evaluate')
     parser.add_argument('--imagesize', default=224, type=int, help='image size, only square images are supported')
     parser.add_argument('--batchsize', default=256, type=int, help='batch size for training')
     parser.add_argument('--numworkers', default=4, type=int, help='number of subprocesses to use for dataloading')
