@@ -1,0 +1,27 @@
+name: bagnetsv2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - numpy # To install numpy with old system gcc
+  - pip
+  - pip:
+    - torch==2.6.0
+    - torchvision==0.21.0
+    - opencv-python
+    - pillow
+    - scikit-learn
+    - scikit-image
+    - scipy
+    - imblearn
+    - pandas
+    - matplotlib
+    - seaborn
+    - glasbey
+    - fundus_image_toolbox
+    - opentsne
+    - umap-learn
+
+# conda remove --name bagnetsv2 --all
+# conda env create -f environment.yml
