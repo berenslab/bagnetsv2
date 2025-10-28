@@ -1,11 +1,11 @@
-# Bagnets v2
+# BagNets v2
 
 This repository contains an updated version of the pytorch implementation of the bag-of-local-feature models (BagNets) originally introduced by Wieland Brendel and Matthias Bethge at ICLR 2019.
 
 * BagNet paper: [Approximating CNNs with Bag-of-local-Features models works surprisingly well on ImageNet](https://openreview.net/pdf?id=SkfMWhAqYQ).
 * BagNet original repository: [BagNets](https://github.com/wielandbrendel/bag-of-local-features-models). 
 
-### Why update bagnets?
+### Why update BagNets?
 The main reason to update the pytorch implementation of bagnets is the presence of dead layers with near 0 weights in the models pretrained with ImageNet, which causes significant differences at inference time when using TF32 vs FP32. This numerical instability is explored in the [bagnet_tf32vsfp32.ipynb](bagnet_tf32vsfp32.ipynb) notebook.
 
 Other updates are mostly related to newer releases of pytorch, such as:
@@ -66,10 +66,10 @@ The following table shows the performance drop when the original bagnet33 is eva
 
 |  **Model**  	|  **Precision**  	| **Top 1 acc** 	| **Top 5 acc** 	|
 |:-----------:	|:---------------:	|:-------------:	|:-------------:	|
-| Bagnet33    	| mixed (float16) 	| 57.96         	| 80.34         	|
+| BagNet33    	| mixed (float16) 	| 57.96         	| 80.34         	|
 |             	| tf32            	| 64.23         	| 85.31         	|
 |             	| float32         	| 66.70         	| 87.00         	|
-| Bagnet33 v2 	| mixed (float16) 	| 65.48         	| 86.34         	|
+| BagNet33 v2 	| mixed (float16) 	| 65.48         	| 86.34         	|
 |             	| tf32            	| 65.49         	| 86.35         	|
 |             	| float32         	| 65.51         	| 86.35         	|
 
