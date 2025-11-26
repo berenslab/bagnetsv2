@@ -125,7 +125,7 @@ def predict(model, dataloader, device):
     model.to(device)
     model.eval()
 
-    preds, probs, targets, embeddings = [], [], [], []
+    preds, probs, targets = [], [], []
     for b, (img, labels) in enumerate(tqdm(dataloader)):            
         img, labels = img.to(device), labels.to(device)
 
@@ -189,11 +189,11 @@ if __name__ == '__main__':
         scheduler.step()
 
         # Early stopping
-        checkpoint = {'state_dict': model.module.state_dict(), 
+        checkpoint = {'state_dict': uncompiled_model.state_dict(), 
                         'optimizer': optimizer.state_dict(), 
                         'scheduler': scheduler.state_dict(), 
                         'epoch': epoch + 1} | loss_curves
-        early_stopping(val_loss, uncompiled_model)
+        early_stopping(val_loss, checkpoint)
         if early_stopping.stop_training:
             break
         
