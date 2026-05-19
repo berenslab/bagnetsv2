@@ -11,11 +11,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import torchvision.datasets as datasets
-from torchvision.models import get_model
-
 import bagnetsv2 as bagnets # Change to import bagnets to see the results of the original model
 import pretrain_imagenet as pt
 import utils
+from torchvision.models import get_model as tv_get_model
 
 
 def get_args():
@@ -43,16 +42,16 @@ def get_dataloader(args):
         dataset_test = datasets.Imagenette('datasets', split='val', transform=transform, size='320px', download=True)
         n_classes = 10
 
-    dataloader_test = DataLoader(dataset_test, batch_size=args.batchsize, shuffle=False, num_workers=args.numworkers, pin_memory=True, drop_last=True)
+    dataloader_test = DataLoader(dataset_test, batch_size=args.batchsize, shuffle=False, num_workers=args.numworkers, pin_memory=True, drop_last=False)
 
     return dataloader_test, n_classes
 
 
-def get_model(args, n_classes):
+def load_model(args, n_classes):
     if 'bagnet' in args.backbone:
         model = bagnets.get_bagnet(args.backbone, weights=None, num_classes=n_classes)
     else:
-        model = get_model(args.backbone, weights=None)
+        model = tv_get_model(args.backbone, weights=None)
         model.fc = nn.Linear(model.fc.in_features, n_classes)
 
     checkpoint = torch.load(args.checkpoint, map_location=torch.device('cpu'))
@@ -65,7 +64,7 @@ if __name__ == '__main__':
     start = time.perf_counter()
 
     dataloader_test, n_classes = get_dataloader(args)
-    model = get_model(args, n_classes)
+    model = load_model(args, n_classes)
 
     # Check for dead convolutional layers
     dead_layer_count = 0
