@@ -212,15 +212,17 @@ def plot_heatmap(heatmap, original, fig, ax, cmap='RdBu_r', percentile=99, alpha
         Mask to set nan values to the heatmap outside the area of interest.
     """
 
+    overlay = None
     if original is not None:
         # Image from tensor to numpy array and grayscale
-        original = np.transpose(original.numpy(), (1, 2, 0)).mean(axis=-1) 
+        original = np.transpose(original.numpy(), (1, 2, 0)).mean(axis=-1)
 
         # Compute edges (to overlay to heatmap)
         edges = skimage.feature.canny(original, sigma=1)
         overlay = np.where(edges, 0, np.nan)
 
-    extent = (-0.5, original.shape[0] - 0.5, original.shape[1] - 0.5, -0.5)
+    img_shape = original.shape if original is not None else heatmap.shape
+    extent = (-0.5, img_shape[0] - 0.5, img_shape[1] - 0.5, -0.5)
     
     perc = np.nanpercentile(np.abs(heatmap), percentile)
     # print(np.nanmin(heatmap), np.nanmax(heatmap), perc)
