@@ -213,7 +213,7 @@ def predict(model, dataloader, device):
 
 if __name__ == '__main__':
     args = get_args()
-    start = time.time()
+    start = time.perf_counter()
 
     ##################### TRAINING PARAMS ######################
     experiment_name = f'{args.backbone}_{args.dataset}'
@@ -246,7 +246,7 @@ if __name__ == '__main__':
     scaler = torch.amp.GradScaler()
     loss_curves = {'loss_train': [], 'loss_val': []}
     for epoch in range(start_epoch, args.epochs):
-        start_time = time.time()
+        start_time = time.perf_counter()
 
         # Training
         train_loss = train(
@@ -270,7 +270,7 @@ if __name__ == '__main__':
         if early_stopping.stop_training:
             break
 
-        end_time = time.time()
+        end_time = time.perf_counter()
         print(
             f'Epoch {epoch + 1}, train loss {train_loss:.3f}, val loss {val_loss:.3f}, {end_time - start_time:.1f} s'
         )
@@ -289,7 +289,7 @@ if __name__ == '__main__':
     plt.tight_layout()
     fig.savefig(plot_file)
 
-    print(f'Total training time: {time.time() - start:.1f} s')
+    print(f'Total training time: {time.perf_counter() - start:.1f} s')
 
     ###################### EVALUATION #########################
     model, _, _, _, _ = get_train_objs(args, n_classes, checkpoint_file)

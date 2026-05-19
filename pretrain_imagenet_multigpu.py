@@ -153,7 +153,7 @@ def main_worker(checkpoint_file, args):
             break
 
     if rank == 0:
-        print(f'Total training time: {time.time() - start_time_train:.1f} s')
+        print(f'Total training time: {time.perf_counter() - start_time_train:.1f} s')
 
     dist.destroy_process_group()
 
