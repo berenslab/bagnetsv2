@@ -175,3 +175,7 @@ cython_debug/
 data/
 datasets/
 checkpoints/
+experiments/
+
+# Agents
+CLAUDE.md
