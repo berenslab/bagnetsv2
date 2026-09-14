@@ -348,7 +348,7 @@ def predict(model, dataloader, device, autocast=True):
     model.eval()
 
     probs, targets = [], []
-    for b, (img, labels) in enumerate(tqdm(dataloader)):
+    for b, (img, labels) in enumerate(tqdm(dataloader, disable=tqdm_disable())):
         img, labels = img.to(device), labels.to(device)
 
         with (
