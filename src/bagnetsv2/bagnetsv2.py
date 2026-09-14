@@ -1,30 +1,30 @@
-'''BagNet implementation adapted from: https://github.com/wielandbrendel/bag-of-local-features-models/blob/master/bagnets/pytorchnet.py'''
+"""BagNet implementation adapted from: https://github.com/wielandbrendel/bag-of-local-features-models/blob/master/bagnets/pytorchnet.py"""
 
-import numpy as np
+import os
+
 import matplotlib.pyplot as plt
-import os 
-import torch
-import torch.nn as nn
-import torchvision.transforms as transforms
-from torch.utils import model_zoo
+import numpy as np
 import skimage
-
-
-model_files = {
-            'bagnet9': 'models/bagnet9_imagenet_pretrained.pt',
-            'bagnet17': 'models/bagnet17_imagenet_pretrained.pt',
-            'bagnet33': 'models/bagnet33_imagenet_pretrained.pt',
-                            }
+import torch
+from torch import nn
+from torchvision import transforms
 
 
 class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, kernel_size=1):
-        super(Bottleneck, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=kernel_size, stride=stride, padding=(kernel_size - 1) // 2, bias=False) 
+        self.conv2 = nn.Conv2d(
+            planes,
+            planes,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=(kernel_size - 1) // 2,
+            bias=False,
+        )
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
@@ -48,7 +48,7 @@ class Bottleneck(nn.Module):
 
         if self.downsample is not None:
             residual = self.downsample(x)
-        
+
         out += residual
         out = self.relu(out)
 
@@ -56,17 +56,47 @@ class Bottleneck(nn.Module):
 
 
 class BagNet(nn.Module):
-
-    def __init__(self, block, layers, strides=[1, 2, 2, 2], kernel3=[0, 0, 0, 0], num_classes=1000, avg_pool=True):
+    def __init__(
+        self,
+        block,
+        layers,
+        strides=[1, 2, 2, 2],
+        kernel3=[0, 0, 0, 0],
+        num_classes=1000,
+        avg_pool=True,
+    ):
         self.inplanes = 64
-        super(BagNet, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
-        self.layer1 = self._make_layer(block, 64, layers[0], stride=strides[0], kernel3=kernel3[0], prefix='layer1')
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=strides[1], kernel3=kernel3[1], prefix='layer2')
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=strides[2], kernel3=kernel3[2], prefix='layer3')
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=strides[3], kernel3=kernel3[3], prefix='layer4')
+        self.layer1 = self._make_layer(
+            block, 64, layers[0], stride=strides[0], kernel3=kernel3[0], prefix='layer1'
+        )
+        self.layer2 = self._make_layer(
+            block,
+            128,
+            layers[1],
+            stride=strides[1],
+            kernel3=kernel3[1],
+            prefix='layer2',
+        )
+        self.layer3 = self._make_layer(
+            block,
+            256,
+            layers[2],
+            stride=strides[2],
+            kernel3=kernel3[2],
+            prefix='layer3',
+        )
+        self.layer4 = self._make_layer(
+            block,
+            512,
+            layers[3],
+            stride=strides[3],
+            kernel3=kernel3[3],
+            prefix='layer4',
+        )
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
         self.avg_pool = avg_pool
@@ -84,13 +114,21 @@ class BagNet(nn.Module):
         downsample = None
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False),
+                nn.Conv2d(
+                    self.inplanes,
+                    planes * block.expansion,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
                 nn.BatchNorm2d(planes * block.expansion),
             )
 
         layers = []
         kernel = 1 if kernel3 == 0 else 3
-        layers.append(block(self.inplanes, planes, stride, downsample, kernel_size=kernel))
+        layers.append(
+            block(self.inplanes, planes, stride, downsample, kernel_size=kernel)
+        )
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
             kernel = 1 if kernel3 <= i else 3
@@ -112,37 +150,48 @@ class BagNet(nn.Module):
             x = self.avgpool(x).flatten(start_dim=1)
             x = self.fc(x)
         else:
-            x = x.permute(0,2,3,1).contiguous()
+            x = x.permute(0, 2, 3, 1).contiguous()
             x = self.fc(x)
 
         return x
-    
 
-def get_bagnet(name, weights, strides=[2, 2, 2, 1], **kwargs):
+
+def get_bagnet(name, weights, strides=[2, 2, 2, 1], weights_path=None, **kwargs):
+    """Get bagnet33, bagnet17 or bagnet9.
+
+    Args:
+        name (str): This should be one of the BagNets.
+        weights (str): Can be DEFAULT or None, DEFAULT will load the weights pretrained
+            on imagenet, anything else will return a model with randomly initialized weights.
+        weights_path (str): Full path to the pretrained weights file. Only used when
+            weights='DEFAULT'. Defaults to 'models/<name>_imagenet_pretrained.pt',
+            resolved relative to the current working directory.
     """
-    Get bagnet33, bagnet17 or bagnet9.
-    
-    Parameters
-    ----------
-    name : string
-        This should be one of the BagNets.
-    weights : string
-        Can be DEFAULT or None, DEFAULT will load the weights pretrained 
-        on imagenet, anything else will return a model with randomly 
-        initialized weights.
-    """ 
     if name == 'bagnet33':
-        model = BagNet(Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1,1,1,1], **kwargs)
+        model = BagNet(
+            Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1, 1, 1, 1], **kwargs
+        )
     elif name == 'bagnet17':
-        model = BagNet(Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1,1,1,0], **kwargs)
+        model = BagNet(
+            Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1, 1, 1, 0], **kwargs
+        )
     elif name == 'bagnet9':
-        model = BagNet(Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1,1,0,0], **kwargs)
+        model = BagNet(
+            Bottleneck, [3, 4, 6, 3], strides=strides, kernel3=[1, 1, 0, 0], **kwargs
+        )
     else:
         raise Exception('Bagnet not supported, try bagnet9, bagnet17 or bagnet33')
-    
+
     # To mimic tochvision get_model
     if weights == 'DEFAULT':
-        model.load_state_dict(torch.load(model_files[name], map_location=torch.device('cpu'), weights_only=True))
+        weights_path = weights_path or os.path.join(
+            'models', f'{name}_imagenet_pretrained.pt'
+        )
+        model.load_state_dict(
+            torch.load(
+                weights_path, map_location=torch.device('cpu'), weights_only=True
+            )
+        )
 
     return model
 
@@ -152,7 +201,7 @@ def generate_heatmap(model, image, target, patchsize, device):
     Generates high-resolution heatmap for a BagNet by decomposing the
     image into all possible patches and by computing the logits for
     each patch.
-    
+
     Parameters
     ----------
     model : Pytorch Model
@@ -163,11 +212,13 @@ def generate_heatmap(model, image, target, patchsize, device):
         Class for which the heatmap is computed.
     patchsize : int
         The size of the receptive field of the given BagNet.
-    
+
     """
     # pad image with zeros
     _, h, w = image.shape
-    image = transforms.functional.pad(image, padding=patchsize//2, fill=0, padding_mode='constant').unsqueeze(0)
+    image = transforms.functional.pad(
+        image, padding=patchsize // 2, fill=0, padding_mode='constant'
+    ).unsqueeze(0)
 
     # extract patches: unfold(dim, size, step)
     patches = image.permute(0, 2, 3, 1)
@@ -186,13 +237,15 @@ def generate_heatmap(model, image, target, patchsize, device):
 
     logits = np.array(logits_list)
     return logits.reshape((h, w))
-    
 
-def plot_heatmap(heatmap, original, fig, ax, cmap='RdBu_r', percentile=99, alpha=0.25, mask=None):
+
+def plot_heatmap(
+    heatmap, original, fig, ax, cmap='RdBu_r', percentile=99, alpha=0.25, mask=None
+):
     """
-    Plots the heatmap on top of the original image 
+    Plots the heatmap on top of the original image
     (which is shown by most important edges).
-    
+
     Parameters
     ----------
     heatmap : Numpy Array of shape [Y, Y]
@@ -223,13 +276,20 @@ def plot_heatmap(heatmap, original, fig, ax, cmap='RdBu_r', percentile=99, alpha
 
     img_shape = original.shape if original is not None else heatmap.shape
     extent = (-0.5, img_shape[0] - 0.5, img_shape[1] - 0.5, -0.5)
-    
+
     perc = np.nanpercentile(np.abs(heatmap), percentile)
     # print(np.nanmin(heatmap), np.nanmax(heatmap), perc)
     cmap = plt.get_cmap(cmap)
     cmap.set_bad(alpha=0)
 
-    hm = ax.imshow(heatmap, interpolation='bilinear', cmap=cmap, vmin=-perc, vmax=perc, extent=extent)
+    hm = ax.imshow(
+        heatmap,
+        interpolation='bilinear',
+        cmap=cmap,
+        vmin=-perc,
+        vmax=perc,
+        extent=extent,
+    )
     fig.colorbar(hm, ax=ax, shrink=0.2)
 
     if mask is not None:
@@ -238,6 +298,11 @@ def plot_heatmap(heatmap, original, fig, ax, cmap='RdBu_r', percentile=99, alpha
     if overlay is not None:
         cmap_original = plt.get_cmap('Greys_r')
         cmap_original.set_bad(alpha=0)
-        ax.imshow(overlay, interpolation='none', cmap=cmap_original, alpha=alpha, extent=extent)
+        ax.imshow(
+            overlay,
+            interpolation='none',
+            cmap=cmap_original,
+            alpha=alpha,
+            extent=extent,
+        )
     ax.axis('off')
-        

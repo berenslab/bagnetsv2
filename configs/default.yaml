@@ -1,0 +1,38 @@
+experiment_name: ${model.variant}_${dataset.name}
+
+seed: 42
+device: cuda:0
+checkpoint: checkpoints/${experiment_name}.pt  # eval.py only: path to a trained checkpoint to load
+
+dataset:
+  dir: ./datasets      # root dir passed to the torchvision dataset
+  name: imagenette      # imagenet, imagenette
+
+model:
+  variant: bagnet33      # bagnet33, bagnet17, bagnet9, resnet18, resnet50
+
+optim:
+  name: sgd            # sgd, adamw
+  lr: 0.01              # when using SGD scale by 0.01 * train.batch_size / 256
+  weight_decay: 1e-4
+
+train:
+  image_size: 224
+  batch_size: 256      # effective batch size for train_multigpu.py
+  epochs: 90
+  num_workers: 4
+
+stop:
+  min_delta: 1e-4
+  patience: 10
+
+wandb:
+  project: bagnetsv2
+  entity: null
+  mode: offline         # online, offline, disabled
+
+hydra:
+  searchpath:
+    - file://configs
+  run:
+    dir: experiments/${experiment_name}

@@ -20,10 +20,9 @@ pwd
 nvidia-smi # only if you requested gpus
 
 # Setup Phase
-source ~/.bashrc
-conda activate bagnetsv2
+source .venv/bin/activate
 
 echo Training bagnet33 on ImageNet...
-torchrun --standalone --nproc_per_node=8 pretrain_imagenet_multigpu.py --backbone bagnet33 --dataset imagenet --batchsize 1024 --epochs 90 --numworkers 4 
+torchrun --standalone --nproc_per_node=8 -m bagnetsv2.train_multigpu model.variant=bagnet33 dataset.name=imagenet dataset.dir=<IMAGENET_DIR> train.batch_size=1024 optim.lr=0.04 train.epochs=90 train.num_workers=4
 
-conda deactivate
+deactivate

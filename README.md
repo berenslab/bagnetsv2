@@ -6,41 +6,52 @@ This repository contains an updated version of the pytorch implementation of the
 * BagNet original repository: [BagNets](https://github.com/wielandbrendel/bag-of-local-features-models). 
 
 ### Why update BagNets?
-The main reason to update the pytorch implementation of bagnets is the presence of dead layers with near 0 weights in the models pretrained with ImageNet, which causes significant differences at inference time when using TF32 vs FP32. This numerical instability is explored in the [bagnet_tf32vsfp32.ipynb](bagnet_tf32vsfp32.ipynb) notebook.
+The main reason to update the pytorch implementation of bagnets is the presence of dead layers with near 0 weights in the models pretrained with ImageNet, which causes significant differences at inference time when using TF32 vs FP32. This numerical instability is explored in the [bagnet_tf32vsfp32.ipynb](notebooks/bagnet_tf32vsfp32.ipynb) notebook.
 
 Other updates are mostly related to newer releases of pytorch, such as:
 * Weight initialization: Kaiming initialization is now implemented in pytorch.
 * Average pooling: to use the adaptive version.
-* Added padding: to avoid downsampling by indexing and reduce the presence of artifacts in heatmaps of images that contain the equivalent to 0 padding such as the black area around fundus images.
+* Added padding: the original bottleneck's conv2 has no padding, so the main path shrinks more than the residual, which is cropped to match (discarding its trailing rows/columns). This results in the residual path being off-center relative to the main path. Fewer heatmap artifacts at sharp intensity edges, such as the black borders around fundus images, were observed after fixing this offset. Padding keeps the main and residual paths the same size, so they stay spatially aligned.
 * Removed conv1: since 2 convolutional layers without a non-linearity in between are equivalent to a single convolutional layer, because they are linear operations. This additional layer is present in the original pytorch implementation, however it is not present in the paper's architecture diagram.
 * Batch normalization momentum: found no difference when changing the momentum of bn1 to match the default of the other layers.
 
 ### Installation
 ```bash
-conda env create -f environment.yml
+uv sync
+uv pip install -e .
 ```
 
 ### Usage
 To load any of the bagnetsv2 pretrained on ImageNet, use the name "bagnet33", "bagnet17" or "bagnet9". To load a model with randomly initialized weights change weights to None.
 
-```python 
-import bagnetsv2 as bagnets
+```python
+from bagnetsv2 import bagnetsv2 as bagnets
 model = bagnets.get_bagnet(name='bagnet33', weights='DEFAULT', num_classes=1000)
 ```
 
-The models expect RGB images as tensors with normalized pixel values. The augmentations can be retrieved by the "get_augmentations" function from utils.py. 
+The models expect RGB images as tensors with normalized pixel values. The augmentations can be retrieved by the "get_augmentations" function from `src/bagnetsv2/utils.py`.
 
-```python 
-import utils
-utils.get_augmentations(img_size, normalization=utils.ImageNet_NORMALIZATION)
+```python
+from bagnetsv2 import utils
+utils.get_augmentations(img_size, normalization=utils.IMAGENET_NORMALIZATION)
 ```
 
-To pretrain a bagnet on imagenet change IMAGENET_DIR in utils.py and use:
+Training and evaluation use [Hydra](https://hydra.cc) configs (`configs/default.yaml`), so every CLI flag below is a config override (`key=value`). To pretrain a bagnet on imagenet, point `dataset.dir` at the extracted ImageNet directory and use:
 ```bash
-torchrun --standalone --nproc_per_node=8 pretrain_imagenet_multigpu.py --backbone bagnet33 --dataset imagenet --batchsize 1024 --epochs 90 --numworkers 4
+torchrun --standalone --nproc_per_node=8 -m bagnetsv2.train_multigpu model.variant=bagnet33 dataset.name=imagenet dataset.dir=/path/to/ImageNet2012 train.batch_size=1024 train.epochs=90 train.num_workers=4
 ```
 
-For small scale experiments the dataset argument can be changed to use imagenette.
+For small scale experiments `dataset.name` can be changed to use imagenette (auto-downloaded under `dataset.dir`), and training can be run on a single GPU with:
+```bash
+python -m bagnetsv2.train model.variant=bagnet33 dataset.name=imagenette
+```
+
+Training progress (loss, top-1/top-5 accuracy) is logged to Weights & Biases, offline by default (`wandb.mode=offline`; sync later with `wandb sync`, or set `wandb.mode=online`/`disabled`).
+
+To evaluate a trained checkpoint (defaults to `checkpoints/${experiment_name}.pt`, i.e. the one written by the matching training run; pass `checkpoint=...` to load a different file):
+```bash
+python -m bagnetsv2.eval model.variant=bagnet33 dataset.name=imagenet
+```
 
 ### Pretrained weights
 The model weights released in this repository were pretrained on ImageNet with 8 A100 GPUs for 90 epochs (14h10). :
@@ -77,5 +88,5 @@ The difference can also be observed by looking at the distribution of the weight
 
 ![imagenet](plots/bagnet33_weights.png)
 
-More details can be found in the [bagnet_tf32vsfp32.ipynb](bagnet_tf32vsfp32.ipynb) notebook.
+More details can be found in the [bagnet_tf32vsfp32.ipynb](notebooks/bagnet_tf32vsfp32.ipynb) notebook.
 
